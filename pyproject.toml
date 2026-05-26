@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "er-randomizer-spoiler-viewer"
+version = "0.1.0"
+description = "GUI viewer for Elden Ring Randomizer spoiler logs"
+requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "MIT" }
+
+[project.scripts]
+er-spoiler-viewer = "er_randomizer.__main__:run"
+
+[tool.setuptools.packages.find]
+include = ["er_randomizer*"]
