@@ -204,27 +204,32 @@ def _format_spoiler(entry: SpoilerEntry) -> list[tuple[str, str]]:
 def _format_placement(entry: PlacementEntry) -> list[tuple[str, str]]:
     """Render a boss/miniboss/basic placement.
 
-    Bold name = the **replacement** (who you actually fight in this slot).
-    Below: the in-game location, then explicit "заменяет {original}" so
-    there's no ambiguity about which way the swap went.
+    Main line: ``original  →  replacement`` — the direction of the swap
+    is immediately obvious: vanilla boss on the left, seed boss on the
+    right. The replacement (who you fight) is bold; the original is
+    rendered in the detail/muted style so the eye lands on the new name
+    first but the vanilla context is right there.
     """
 
-    parts: list[tuple[str, str]] = [
-        (TAG_NAME, entry.replacement),
-        (TAG_PLAIN, "\n"),
-    ]
-    location = _normalise_location(entry.original_location)
-    if location:
-        parts.append((TAG_INDENT, _INDENT))
-        parts.append((TAG_LOCATION, location))
-        parts.append((TAG_PLAIN, "\n"))
-
+    parts: list[tuple[str, str]] = []
+    parts.append((TAG_NAME, entry.replacement))
     if entry.original:
+        parts.append((TAG_ARROW, _ARROW))
+        parts.append((TAG_DETAIL, entry.original))
+    parts.append((TAG_PLAIN, "\n"))
+
+    # Location line: slot location  ←  source location of the replacement.
+    # The ← arrow (styled as accent) visually marks "the replacement came FROM here".
+    location = _normalise_location(entry.original_location)
+    repl_loc = _normalise_location(entry.replacement_location)
+    if location or repl_loc:
         parts.append((TAG_INDENT, _INDENT))
-        parts.append((TAG_DETAIL, "заменяет "))
-        parts.append((TAG_NAME, entry.original))
-        if entry.replacement_location:
-            parts.append((TAG_DETAIL, f"   (родом из {_normalise_location(entry.replacement_location)})"))
+        if location:
+            parts.append((TAG_LOCATION, location))
+        if location and repl_loc:
+            parts.append((TAG_ARROW, "  ←  "))
+        if repl_loc:
+            parts.append((TAG_LOCATION, repl_loc))
         parts.append((TAG_PLAIN, "\n"))
 
     parts.append((TAG_PLAIN, "\n"))
@@ -268,14 +273,18 @@ def _spoiler_to_text(entry: SpoilerEntry) -> str:
 
 
 def _placement_to_text(entry: PlacementEntry) -> str:
-    lines = [entry.replacement]
-    location = _normalise_location(entry.original_location)
-    if location:
-        lines.append(f"  Где найти: {location}")
     if entry.original:
-        lines.append(f"  Кого заменяет: {entry.original}")
-    if entry.replacement_location:
-        lines.append(f"  Откуда взят: {_normalise_location(entry.replacement_location)}")
+        lines = [f"{entry.replacement}  →  {entry.original}"]
+    else:
+        lines = [entry.replacement]
+    location = _normalise_location(entry.original_location)
+    repl_loc = _normalise_location(entry.replacement_location)
+    if location and repl_loc:
+        lines.append(f"  {location}  ←  {repl_loc}")
+    elif location:
+        lines.append(f"  {location}")
+    elif repl_loc:
+        lines.append(f"  {repl_loc}")
     return "\n".join(lines) + "\n\n"
 
 

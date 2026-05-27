@@ -72,34 +72,31 @@ LIGHT_THEME = Theme(
 
 
 DARK_THEME = Theme(
-    # Tuned for clear hierarchy on a dark background:
-    # window bg < panel < panel_alt < entry, with a saturated accent that
-    # pops against all of them so headers / checked states / focused
-    # entries are obviously distinct.
+    # TarnishedTool-inspired palette: near-black base, warm gold accent.
     name="dark",
-    bg="#13151c",            # window bg (darkest)
-    panel="#1d2029",         # outer frames
-    panel_alt="#262a36",     # inner frames (left categories, toolbars)
-    border="#3a4055",        # frame separators
-    text="#eef1f7",
-    muted="#9aa3b8",         # bumped from #8b91a3 for legibility
-    accent="#5b9cf6",
-    accent_fg="#0c0f15",
-    name_fg="#ffffff",       # max contrast for primary item names
-    value_fg="#dde2ee",      # bumped so values aren't washed out
-    label_fg="#9aa3b8",
-    bullet_fg="#7eb6ff",
-    header_bg="#5b9cf6",     # full-width accent strip — sections pop
-    header_fg="#0c0f15",
-    button_bg="#2b3142",
-    button_fg="#eef1f7",
-    button_active_bg="#3a4259",
-    entry_bg="#2b3142",
-    entry_fg="#ffffff",
-    results_bg="#181b23",    # slightly darker than panel for contrast
-    scrollbar_trough="#1d2029",
-    scrollbar_bg="#465070",
-    cap_fg="#9aa3b8",
+    bg="#121212",
+    panel="#1a1a1a",
+    panel_alt="#252525",
+    border="#333333",
+    text="#eaeaea",
+    muted="#888888",
+    accent="#b37c07",
+    accent_fg="#121212",
+    name_fg="#ffffff",
+    value_fg="#c8c8c8",
+    label_fg="#888888",
+    bullet_fg="#b37c07",
+    header_bg="#92400e",
+    header_fg="#eaeaea",
+    button_bg="#252525",
+    button_fg="#eaeaea",
+    button_active_bg="#5a3d00",
+    entry_bg="#252525",
+    entry_fg="#eaeaea",
+    results_bg="#0f0f0f",
+    scrollbar_trough="#1a1a1a",
+    scrollbar_bg="#92400e",
+    cap_fg="#888888",
 )
 
 

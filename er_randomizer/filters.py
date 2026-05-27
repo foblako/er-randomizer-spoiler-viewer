@@ -48,8 +48,10 @@ GREAT_RUNE_ACCESS_KEYS: frozenset[str] = frozenset(
         # Consecrated Snowfield / Haligtree (Malenia's slot)
         "Haligtree Secret Medallion (Left)",
         "Haligtree Secret Medallion (Right)",
-        # Mohgwyn Palace short-cut (Mohg's slot)
+        # Mohgwyn Palace — two routes: Varré's shortcut medal OR the
+        # underground door in Subterranean Shunning-Grounds (Mohg's slot).
         "Pureblood Knight's Medal",
+        "Discarded Palace Key",
         # Lift of Dectus → Altus Plateau (alternate route to Morgott)
         "Dectus Medallion (Left)",
         "Dectus Medallion (Right)",

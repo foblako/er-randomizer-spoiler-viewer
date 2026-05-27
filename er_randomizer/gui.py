@@ -41,6 +41,7 @@ from __future__ import annotations
 import contextlib
 import os
 import tkinter as tk
+import tkinter.font as _tkfont
 from tkinter import filedialog, messagebox, simpledialog
 
 from er_randomizer.filters import BUILTIN_FILTERS, DEFAULT_FILTER, BuiltinFilter
@@ -104,6 +105,144 @@ _PREFIX_BUILTIN = "B:"
 _PREFIX_USER = "U:"
 
 
+class _RndBtn:
+    """Canvas-backed button with rounded corners and smooth hover effect.
+
+    Drop-in replacement for tk.Button — exposes the subset of the Button
+    API that SpoilerViewerApp actually uses so the rest of the code stays
+    unchanged.
+    """
+
+    _RADIUS = 8
+    _FONT = ("Arial", 10)
+
+    def __init__(
+        self,
+        parent: tk.Misc,
+        *,
+        text: str = "",
+        command=None,
+        bg: str = "#252525",
+        fg: str = "#eaeaea",
+        activebackground: str = "#333333",
+        activeforeground: str = "#eaeaea",
+        disabledforeground: str = "#666666",
+        padx: int = 12,
+        pady: int = 6,
+        state=tk.NORMAL,
+        **_ignored,
+    ) -> None:
+        self._parent = parent
+        self._text = text
+        self._command = command
+        self._bg = bg
+        self._fg = fg
+        self._hover_bg = activebackground
+        self._dis_fg = disabledforeground
+        self._state: str = str(state)
+        self._hover = False
+
+        f = _tkfont.Font(family=self._FONT[0], size=self._FONT[1])
+        w = f.measure(text) + padx * 2
+        h = f.metrics("linespace") + pady * 2
+
+        self._cv = tk.Canvas(
+            parent,
+            width=w,
+            height=h,
+            bd=0,
+            highlightthickness=0,
+            cursor="hand2",
+        )
+        self._cv.bind("<Enter>", lambda _e: self._set_hover(True))
+        self._cv.bind("<Leave>", lambda _e: self._set_hover(False))
+        self._cv.bind("<Button-1>", lambda _e: self._click())
+        self._cv.bind("<Configure>", lambda _e: self._draw())
+        self._draw()
+
+    # ── geometry managers ────────────────────────────────────────────
+
+    def pack(self, **kw) -> None:
+        self._cv.pack(**kw)
+
+    def grid(self, **kw) -> None:
+        self._cv.grid(**kw)
+
+    def pack_forget(self) -> None:
+        self._cv.pack_forget()
+
+    # ── tk.Button API subset ─────────────────────────────────────────
+
+    def config(self, **kw) -> None:
+        changed = False
+        if "state" in kw:
+            self._state = str(kw.pop("state"))
+            changed = True
+        if "text" in kw:
+            self._text = kw.pop("text")
+            changed = True
+        if "bg" in kw:
+            self._bg = kw.pop("bg")
+            changed = True
+        if "activebackground" in kw:
+            self._hover_bg = kw.pop("activebackground")
+            changed = True
+        if "fg" in kw:
+            self._fg = kw.pop("fg")
+            changed = True
+        if "disabledforeground" in kw:
+            self._dis_fg = kw.pop("disabledforeground")
+            changed = True
+        for _k in ("activeforeground", "relief", "borderwidth", "padx", "pady", "cursor", "command"):
+            kw.pop(_k, None)
+        if "command" in kw:
+            self._command = kw.pop("command")
+        if changed:
+            self._draw()
+
+    configure = config
+
+    def cget(self, key: str) -> object:
+        if key == "state":
+            return self._state
+        if key == "bg":
+            return self._bg
+        return self._cv.cget(key)
+
+    # ── internals ────────────────────────────────────────────────────
+
+    def _set_hover(self, val: bool) -> None:
+        if self._state == str(tk.DISABLED):
+            return
+        self._hover = val
+        self._draw()
+
+    def _click(self) -> None:
+        if self._state != str(tk.DISABLED) and self._command:
+            self._command()
+
+    def _draw(self) -> None:
+        c = self._cv
+        c.delete("all")
+        W = c.winfo_width() or c.winfo_reqwidth()
+        H = c.winfo_height() or c.winfo_reqheight()
+        r = self._RADIUS
+        fill = self._hover_bg if self._hover else self._bg
+        fg = self._dis_fg if self._state == str(tk.DISABLED) else self._fg
+        # Canvas bg matches parent so corners look transparent.
+        with contextlib.suppress(tk.TclError):
+            c.configure(bg=self._parent.cget("bg"))
+        # Rounded rectangle: four arcs at the corners + two fill rects.
+        c.create_arc(0, 0, 2 * r, 2 * r, start=90, extent=90, fill=fill, outline="")
+        c.create_arc(W - 2 * r, 0, W, 2 * r, start=0, extent=90, fill=fill, outline="")
+        c.create_arc(0, H - 2 * r, 2 * r, H, start=180, extent=90, fill=fill, outline="")
+        c.create_arc(W - 2 * r, H - 2 * r, W, H, start=270, extent=90, fill=fill, outline="")
+        c.create_rectangle(r, 0, W - r, H, fill=fill, outline="")
+        c.create_rectangle(0, r, W, H - r, fill=fill, outline="")
+        c.create_text(W // 2, H // 2, text=self._text, fill=fg,
+                      font=self._FONT, anchor="center")
+
+
 class SpoilerViewerApp:
     """Top-level Tk application window."""
 
@@ -146,7 +285,7 @@ class SpoilerViewerApp:
         self.theme: Theme = load_preferred_theme()
         self._frames: list[tuple[tk.Misc, str]] = []
         self._labels: list[tuple[tk.Label, str]] = []
-        self._buttons: list[tk.Button] = []
+        self._buttons: list[_RndBtn] = []
         self._entries: list[tk.Entry] = []
 
         self._build_layout()
@@ -365,13 +504,14 @@ class SpoilerViewerApp:
         self._labels.append((lbl, "muted" if muted else "text"))
         return lbl
 
-    def _button(self, parent: tk.Misc, **kwargs) -> tk.Button:
-        kwargs.setdefault("relief", tk.FLAT)
-        kwargs.setdefault("cursor", "hand2")
-        kwargs.setdefault("borderwidth", 0)
+    def _button(self, parent: tk.Misc, **kwargs) -> _RndBtn:
+        kwargs.setdefault("bg", self.theme.button_bg)
+        kwargs.setdefault("fg", self.theme.button_fg)
+        kwargs.setdefault("activebackground", self.theme.button_active_bg)
+        kwargs.setdefault("disabledforeground", self.theme.muted)
         kwargs.setdefault("padx", 12)
         kwargs.setdefault("pady", 6)
-        btn = tk.Button(parent, **kwargs)
+        btn = _RndBtn(parent, **kwargs)
         self._buttons.append(btn)
         return btn
 
