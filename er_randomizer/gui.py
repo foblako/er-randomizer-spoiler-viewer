@@ -719,45 +719,40 @@ class SpoilerViewerApp:
         # `user_fps`.
         builtin = self._active_builtin
 
-        for key in keys:
-            entries = self.log.get(key)
-            if not entries:
-                continue
-            haystacks = self._search_cache.get(key) or [
-                entry_searchable(e) for e in entries
-            ]
-            self._search_cache[key] = haystacks
-
-            item_allow = builtin.item_filter_for(key) if builtin else None
-            original_allow = (
-                builtin.original_filter_for(key) if builtin else None
-            )
-
-            filtered: list[tuple[object, str]] = []
-            for entry, hay in zip(entries, haystacks, strict=False):
-                if query and query not in hay:
+        if builtin and builtin.merged_section_title:
+            all_filtered: list[tuple[object, str]] = []
+            for key in keys:
+                entries = self.log.get(key)
+                if not entries:
                     continue
-                if item_allow is not None and entry_name(entry) not in item_allow:
-                    continue
-                if original_allow is not None:
-                    original = getattr(entry, "original", None)
-                    if original not in original_allow:
+                haystacks = self._search_cache.get(key) or [
+                    entry_searchable(e) for e in entries
+                ]
+                self._search_cache[key] = haystacks
+                item_allow = builtin.item_filter_for(key)
+                original_allow = builtin.original_filter_for(key)
+                for entry, hay in zip(entries, haystacks, strict=False):
+                    if query and query not in hay:
                         continue
-                fp = entry_fingerprint(key, entry)
-                if user_fps is not None and fp not in user_fps:
-                    continue
-                filtered.append((entry, fp))
-
-            if builtin and builtin.original_order:
+                    if item_allow is not None and entry_name(entry) not in item_allow:
+                        continue
+                    if original_allow is not None:
+                        original = getattr(entry, "original", None)
+                        if original not in original_allow:
+                            continue
+                    fp = entry_fingerprint(key, entry)
+                    if user_fps is not None and fp not in user_fps:
+                        continue
+                    all_filtered.append((entry, fp))
+            if builtin.original_order:
                 order_map = {name: i for i, name in enumerate(builtin.original_order)}
                 n = len(builtin.original_order)
-                filtered.sort(
+                all_filtered.sort(
                     key=lambda pair: order_map.get(getattr(pair[0], "original", ""), n)
                 )
-
             section_chunks: list[tuple[str, str]] = []
             section_count = 0
-            for entry, fp in filtered:
+            for entry, fp in all_filtered:
                 total_matches += 1
                 if rendered >= _RENDER_CAP:
                     truncated = True
@@ -765,16 +760,67 @@ class SpoilerViewerApp:
                 section_chunks.extend(self._format_row(entry, fp))
                 section_count += 1
                 rendered += 1
+            if section_count > 0:
+                text_chunks.append((_TAG_HEADER, f"  {builtin.merged_section_title} ({section_count})  \n"))
+                text_chunks.extend(section_chunks)
+                text_chunks.append((TAG_PLAIN, "\n"))
+        else:
+            for key in keys:
+                entries = self.log.get(key)
+                if not entries:
+                    continue
+                haystacks = self._search_cache.get(key) or [
+                    entry_searchable(e) for e in entries
+                ]
+                self._search_cache[key] = haystacks
 
-            if section_count == 0:
-                continue
-            label = (
-                (builtin.section_title_for(key) if builtin else None)
-                or CATEGORY_LABELS.get(key, key)
-            )
-            text_chunks.append((_TAG_HEADER, f"  {label} ({section_count})  \n"))
-            text_chunks.extend(section_chunks)
-            text_chunks.append((TAG_PLAIN, "\n"))
+                item_allow = builtin.item_filter_for(key) if builtin else None
+                original_allow = (
+                    builtin.original_filter_for(key) if builtin else None
+                )
+
+                filtered: list[tuple[object, str]] = []
+                for entry, hay in zip(entries, haystacks, strict=False):
+                    if query and query not in hay:
+                        continue
+                    if item_allow is not None and entry_name(entry) not in item_allow:
+                        continue
+                    if original_allow is not None:
+                        original = getattr(entry, "original", None)
+                        if original not in original_allow:
+                            continue
+                    fp = entry_fingerprint(key, entry)
+                    if user_fps is not None and fp not in user_fps:
+                        continue
+                    filtered.append((entry, fp))
+
+                if builtin and builtin.original_order:
+                    order_map = {name: i for i, name in enumerate(builtin.original_order)}
+                    n = len(builtin.original_order)
+                    filtered.sort(
+                        key=lambda pair: order_map.get(getattr(pair[0], "original", ""), n)
+                    )
+
+                section_chunks: list[tuple[str, str]] = []
+                section_count = 0
+                for entry, fp in filtered:
+                    total_matches += 1
+                    if rendered >= _RENDER_CAP:
+                        truncated = True
+                        continue
+                    section_chunks.extend(self._format_row(entry, fp))
+                    section_count += 1
+                    rendered += 1
+
+                if section_count == 0:
+                    continue
+                label = (
+                    (builtin.section_title_for(key) if builtin else None)
+                    or CATEGORY_LABELS.get(key, key)
+                )
+                text_chunks.append((_TAG_HEADER, f"  {label} ({section_count})  \n"))
+                text_chunks.extend(section_chunks)
+                text_chunks.append((TAG_PLAIN, "\n"))
 
         self._render_tag_to_fp_temp: dict[str, Fingerprint] = {}
         if not text_chunks:

@@ -98,8 +98,10 @@ ACHIEVEMENT_BOSS_ORDER: tuple[str, ...] = (
     "Rennala 1",
     "Rennala 2",
     "Starscourge Radahn",
+    "Draconic Tree Sentinel Boss",       # Capital Rampart gates — required to enter Leyndell
     "Goldfrey, First Elden Lord",        # Erdtree-Sanctuary illusion (typo in randomizer data)
     "Morgott, the Omen King",
+    "Elemer of the Briar",
     "Fire Giant 1",
     "Fire Giant 2",
     "Godskin Duo",
@@ -114,7 +116,6 @@ ACHIEVEMENT_BOSS_ORDER: tuple[str, ...] = (
     "Godskin Noble Boss",
     "God-Devouring Serpent",             # Phase 1 of Rykard — separate slot in randomizer data
     "Rykard, Lord of Blasphemy",
-    "Elemer of the Briar",
     "Dragonlord Placidusax",
     "Commander Niall",
     "Regal Ancestor Spirit",
@@ -187,6 +188,7 @@ class BuiltinFilter:
     original_filters: tuple[tuple[str, frozenset[str]], ...] = ()
     section_titles: tuple[tuple[str, str], ...] = ()
     original_order: tuple[str, ...] = ()
+    merged_section_title: str = ""
 
     def item_filter_for(self, key: str) -> frozenset[str] | None:
         for k, names in self.item_filters:
@@ -252,11 +254,8 @@ BUILTIN_FILTERS: tuple[BuiltinFilter, ...] = (
             ("boss_placements", ACHIEVEMENT_BOSSES),
             ("miniboss_placements", ACHIEVEMENT_BOSSES),
         ),
-        section_titles=(
-            ("boss_placements", "Ачивочные слоты (Boss placements)"),
-            ("miniboss_placements", "Ачивочные слоты (Miniboss placements)"),
-        ),
         original_order=ACHIEVEMENT_BOSS_ORDER,
+        merged_section_title="Ачивочные слоты",
     ),
     BuiltinFilter(
         name="Все боссы",
