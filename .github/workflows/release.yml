@@ -1,40 +1,52 @@
-name: Build and Release
+name: Release
 
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  release:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          python-version: "3.13"
+          node-version: 22
+          cache: 'npm'
 
-      - name: Install PyInstaller
-        run: pip install pyinstaller
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
 
-      - name: Build .exe
-        run: pyinstaller er_spoiler_viewer.spec
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ER-Spoiler-Viewer
-          path: "dist/ER Spoiler Viewer.exe"
-
-      - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Build and Release Tauri App
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create ${{ github.ref_name }} "dist/ER Spoiler Viewer.exe" --generate-notes --title "ER Spoiler Viewer ${{ github.ref_name }}"
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'ER Spoiler Viewer ${{ github.ref_name }}'
+          releaseBody: 'Elden Ring Randomizer Spoiler Log Viewer — fast, dark fantasy desktop viewer with virtual scrolling, real-time search, and full entity categorization.'
+          releaseDraft: false
+          prerelease: false
+
+      - name: Upload portable standalone executable
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          if (Test-Path "src-tauri/target/release/er_spoiler_viewer.exe") {
+            Copy-Item "src-tauri/target/release/er_spoiler_viewer.exe" "Elden-Ring-Spoiler-Viewer-portable.exe"
+            gh release upload ${{ github.ref_name }} "Elden-Ring-Spoiler-Viewer-portable.exe" --clobber
+          }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

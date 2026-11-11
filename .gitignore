@@ -4,27 +4,41 @@ __pycache__/
 *.pyo
 *.pyd
 *.egg-info/
-dist/
-build/
 .eggs/
 *.egg
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
 
 # Virtual environments
 .venv/
 venv/
 env/
 
-# PyInstaller
+# Build outputs & binaries
+dist/
+build/
 *.exe
+*.msi
+*.pdb
 
-# IDE
+# Node & Frontend
+node_modules/
+dist-ssr/
+*.local
+
+# Tauri & Rust
+src-tauri/target/
+src-tauri/gen/
+
+# IDE & OS
 .vscode/
 .idea/
 *.iml
-
-# OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# User config (generated at runtime)
+# Logs & runtime files
+*.log
 ~/.er_randomizer.json

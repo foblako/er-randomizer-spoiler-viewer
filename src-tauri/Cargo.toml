@@ -1,0 +1,24 @@
+[package]
+name = "er_spoiler_viewer"
+version = "1.0.0"
+description = "Elden Ring Randomizer Spoiler Viewer"
+authors = ["foblako"]
+edition = "2021"
+
+[lib]
+name = "er_spoiler_viewer_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7.4", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+regex = "1.11"
+dirs-next = "2.0"
+tauri = { version = "2.12.5", features = [] }
+tauri-plugin-log = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-clipboard-manager = "2"

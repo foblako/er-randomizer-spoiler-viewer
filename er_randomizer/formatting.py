@@ -174,6 +174,7 @@ def _format_spoiler(entry: SpoilerEntry) -> list[tuple[str, str]]:
     location = _normalise_location(entry.location)
     if location:
         parts.append((TAG_INDENT, _INDENT))
+        parts.append((TAG_ARROW, "📍 "))
         parts.append((TAG_LOCATION, location))
         parts.append((TAG_PLAIN, "\n"))
 
@@ -183,10 +184,9 @@ def _format_spoiler(entry: SpoilerEntry) -> list[tuple[str, str]]:
         detail_pieces.append((TAG_DETAIL, description))
     if entry.replaces:
         if detail_pieces:
-            detail_pieces.append((TAG_ARROW, _ARROW))
-        else:
-            detail_pieces.append((TAG_ARROW, "→ "))
-        detail_pieces.append((TAG_DETAIL, entry.replaces))
+            detail_pieces.append((TAG_ARROW, "  ·  "))
+        detail_pieces.append((TAG_ARROW, "🔄 "))
+        detail_pieces.append((TAG_DETAIL, f"Заменяет: {entry.replaces}"))
     if entry.cost is not None:
         if detail_pieces:
             detail_pieces.append((TAG_DETAIL, f"   ({entry.cost} рун)"))
@@ -204,32 +204,33 @@ def _format_spoiler(entry: SpoilerEntry) -> list[tuple[str, str]]:
 def _format_placement(entry: PlacementEntry) -> list[tuple[str, str]]:
     """Render a boss/miniboss/basic placement.
 
-    Main line: ``original  →  replacement`` — the direction of the swap
-    is immediately obvious: vanilla boss on the left, seed boss on the
-    right. The replacement (who you fight) is bold; the original is
-    rendered in the detail/muted style so the eye lands on the new name
-    first but the vanilla context is right there.
+    Clear hierarchy:
+    - Bold name: who you actually encounter/fight (replacement) + (из: {replacement_location}).
+    - Arena line: 📍 Арена: {original_location}
+    - Replaces line: 🔄 Вместо: {original}
     """
 
-    parts: list[tuple[str, str]] = []
-    parts.append((TAG_NAME, entry.replacement))
-    if entry.original:
-        parts.append((TAG_ARROW, _ARROW))
-        parts.append((TAG_DETAIL, entry.original))
+    repl_loc = _normalise_location(entry.replacement_location)
+    parts: list[tuple[str, str]] = [
+        (TAG_NAME, entry.replacement),
+    ]
+    if repl_loc:
+        parts.append((TAG_LOCATION, f"  (из: {repl_loc})"))
     parts.append((TAG_PLAIN, "\n"))
 
-    # Location line: slot location  ←  source location of the replacement.
-    # The ← arrow (styled as accent) visually marks "the replacement came FROM here".
     location = _normalise_location(entry.original_location)
-    repl_loc = _normalise_location(entry.replacement_location)
-    if location or repl_loc:
+    if location:
         parts.append((TAG_INDENT, _INDENT))
-        if location:
-            parts.append((TAG_LOCATION, location))
-        if location and repl_loc:
-            parts.append((TAG_ARROW, "  ←  "))
-        if repl_loc:
-            parts.append((TAG_LOCATION, repl_loc))
+        parts.append((TAG_ARROW, "📍 "))
+        parts.append((TAG_DETAIL, "Арена: "))
+        parts.append((TAG_LOCATION, location))
+        parts.append((TAG_PLAIN, "\n"))
+
+    if entry.original:
+        parts.append((TAG_INDENT, _INDENT))
+        parts.append((TAG_ARROW, "🔄 "))
+        parts.append((TAG_DETAIL, "Вместо: "))
+        parts.append((TAG_NAME, entry.original))
         parts.append((TAG_PLAIN, "\n"))
 
     parts.append((TAG_PLAIN, "\n"))
@@ -237,9 +238,7 @@ def _format_placement(entry: PlacementEntry) -> list[tuple[str, str]]:
 
 
 def _format_replace(entry: ReplaceEntry) -> list[tuple[str, str]]:
-    """Render a gesture / BGM / starting-gift swap. Compact two-line block:
-    bold replacement, then an indented "заменил {original}" line.
-    """
+    """Render a gesture / BGM / starting-gift swap."""
 
     parts: list[tuple[str, str]] = [
         (TAG_NAME, entry.replacement),
@@ -247,8 +246,9 @@ def _format_replace(entry: ReplaceEntry) -> list[tuple[str, str]]:
     ]
     if entry.original:
         parts.append((TAG_INDENT, _INDENT))
-        parts.append((TAG_DETAIL, "заменил "))
-        parts.append((TAG_NAME, entry.original))
+        parts.append((TAG_ARROW, "🔄 "))
+        parts.append((TAG_DETAIL, "Заменяет: "))
+        parts.append((TAG_LOCATION, entry.original))
         parts.append((TAG_PLAIN, "\n"))
     parts.append((TAG_PLAIN, "\n"))
     return parts
@@ -261,37 +261,35 @@ def _spoiler_to_text(entry: SpoilerEntry) -> str:
     lines = [entry.item]
     location = _normalise_location(entry.location)
     if location:
-        lines.append(f"  Где: {location}")
+        lines.append(f"  📍 Где: {location}")
     description = (entry.description or "").rstrip(" .")
     if description:
         lines.append(f"  Как: {description}")
     if entry.replaces:
-        lines.append(f"  Заменяет: {entry.replaces}")
+        lines.append(f"  🔄 Заменяет: {entry.replaces}")
     if entry.cost is not None:
-        lines.append(f"  Стоимость: {entry.cost}")
+        lines.append(f"  Стоимость: {entry.cost} рун")
     return "\n".join(lines) + "\n\n"
 
 
 def _placement_to_text(entry: PlacementEntry) -> str:
-    if entry.original:
-        lines = [f"{entry.replacement}  →  {entry.original}"]
+    repl_loc = _normalise_location(entry.replacement_location)
+    if repl_loc:
+        lines = [f"{entry.replacement} (из: {repl_loc})"]
     else:
         lines = [entry.replacement]
     location = _normalise_location(entry.original_location)
-    repl_loc = _normalise_location(entry.replacement_location)
-    if location and repl_loc:
-        lines.append(f"  {location}  ←  {repl_loc}")
-    elif location:
-        lines.append(f"  {location}")
-    elif repl_loc:
-        lines.append(f"  {repl_loc}")
+    if location:
+        lines.append(f"  📍 Арена: {location}")
+    if entry.original:
+        lines.append(f"  🔄 Вместо: {entry.original}")
     return "\n".join(lines) + "\n\n"
 
 
 def _replace_to_text(entry: ReplaceEntry) -> str:
     lines = [entry.replacement]
     if entry.original:
-        lines.append(f"  Заменяет: {entry.original}")
+        lines.append(f"  🔄 Заменяет: {entry.original}")
     return "\n".join(lines) + "\n\n"
 
 

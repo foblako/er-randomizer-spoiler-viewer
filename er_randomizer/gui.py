@@ -693,7 +693,7 @@ class SpoilerViewerApp:
                 self.root.after_cancel(self._render_after_id)
         self._render_after_id = self.root.after(_SEARCH_DEBOUNCE_MS, self._render)
 
-    def _render(self) -> None:
+    def _render(self, preserve_scroll: bool = False) -> None:
         self._render_after_id = None
         if self.log is None:
             self._set_results_text(
@@ -701,6 +701,8 @@ class SpoilerViewerApp:
             )
             self.total_var.set("")
             return
+
+        yview = self.results.yview() if preserve_scroll else None
 
         query = self.search_var.get().strip().lower()
         keys = self._active_keys
@@ -850,6 +852,9 @@ class SpoilerViewerApp:
                     )
                 )
             self._set_results_chunks(text_chunks)
+            if yview:
+                with contextlib.suppress(Exception):
+                    self.results.yview_moveto(yview[0])
 
         self.total_var.set(f"Всего: {total_matches}")
 
@@ -923,17 +928,42 @@ class SpoilerViewerApp:
     def _toggle_entry(self, fp: Fingerprint) -> None:
         if fp in self._selection:
             self._selection.remove(fp)
+            is_selected = False
         else:
             self._selection.add(fp)
+            is_selected = True
         self._update_selection_bar()
-        self._render()
+
+        # If currently filtering by a user preset, removing/toggling affects the visible list,
+        # so re-render with preserved scroll position.
+        if self._active_user_fps is not None:
+            self._render(preserve_scroll=True)
+            return
+
+        # Instant in-place toggle: update checkbox glyph without re-rendering or touching scroll!
+        self.results.config(state=tk.NORMAL)
+        new_glyph = _BOX_ON if is_selected else _BOX_OFF
+        old_state_tag = _TAG_BOX_OFF if is_selected else _TAG_BOX_ON
+        new_state_tag = _TAG_BOX_ON if is_selected else _TAG_BOX_OFF
+
+        for row_tag, row_fp in self._render_tag_to_fp.items():
+            if row_fp == fp:
+                ranges = self.results.tag_ranges(row_tag)
+                if ranges:
+                    start, end = ranges[0], ranges[1]
+                    # The tag covers the glyph plus spaces (box_glyph + "  ")
+                    self.results.delete(start, f"{start} + 1c")
+                    self.results.insert(start, new_glyph, (_TAG_BOX, new_state_tag, row_tag))
+                    self.results.tag_remove(old_state_tag, start, end)
+                    self.results.tag_add(new_state_tag, start, end)
+        self.results.config(state=tk.DISABLED)
 
     def _clear_selection(self) -> None:
         if not self._selection:
             return
         self._selection.clear()
         self._update_selection_bar()
-        self._render()
+        self._render(preserve_scroll=True)
         self._update_status("Сборка очищена.")
 
     def _update_selection_bar(self) -> None:
